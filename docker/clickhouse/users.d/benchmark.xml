@@ -1,0 +1,11 @@
+<clickhouse>
+    <profiles>
+        <default>
+            <max_threads>4</max_threads>
+            <max_memory_usage>4294967296</max_memory_usage>
+            <log_queries>1</log_queries>
+            <allow_experimental_qbit_type>1</allow_experimental_qbit_type>
+            <max_limit_for_vector_search_queries>100000</max_limit_for_vector_search_queries>
+        </default>
+    </profiles>
+</clickhouse>

@@ -1,0 +1,113 @@
+project:
+  name: clickhouse-vector-search-benchmark
+  seed: 42
+  output_dir: results
+
+docker:
+  container_name: chvecbench-clickhouse
+  image_tag: "${CLICKHOUSE_VERSION:-26.8.44.3}"
+  memory_gb: 6
+  max_server_memory_gb: 4.5
+  cpus: 4
+
+clickhouse:
+  host: localhost
+  http_port: 8123
+  username: default
+  password: benchmark
+  database: vector_benchmark
+  connect_timeout: 10
+  send_receive_timeout: 600
+  max_threads: 4
+  max_limit_for_vector_search_queries: 100000
+  allow_experimental_qbit_type: 1
+  query_log_wait_seconds: 15
+  query_log_poll_interval: 0.25
+
+source:
+  dataset_size: large
+  table_name: movies
+  data_file: data/datasets/MoRe_large/datasets/movies_dataset_0.hdf5
+  vectors_key: train_mvector
+  ids_key: train_mid
+  # Keys are dataset paths inside the same HDF5 file unless a per-column file is given.
+  # Run `python benchmark.py inspect-data --path ...` and set the actual paths below.
+  attributes:
+    avgrating:
+      key: train_avgrating
+      file: null
+    year:
+      key: train_year
+      file: null
+    genre:
+      key: train_genre
+      file: null
+    numvotes:
+      key: train_num_votes
+      file: null
+    title:
+      key: train_title
+      file: null
+  queries:
+    file: null
+    vectors_key: test
+    ids_key: null
+    count: 12
+    # If there is no separate query file, queries are sampled from the base vectors
+    # and their source IDs are excluded from search results.
+  columns:
+    id: mid
+    vector: mvector
+    filter_attribute: avgrating
+  dimension: 768
+  source_vector_type: Float32
+  stored_vector_type: BFloat16
+  normalized_vectors: true
+
+workload:
+  # Pilot values only. Increase to the paper workload after the smoke run succeeds.
+  local_neighbors: 2048
+  local_neighbors_sensitivity: [8192]
+  sigma_targets: [0.01, 0.1, 0.5]
+  include_unfiltered: true
+  k_values: [10, 100]
+  query_count: 12
+  max_ground_truth_k: 100
+  gls_group_thresholds: [-0.3, 0.3]
+
+hnsw:
+  enabled: true
+  m: [32]
+  ef_construction: [128]
+  ef_search: [128, 256]
+  fetch_multiplier: [1.0, 2.0]
+  filter_modes: [postfilter, auto]
+  quantization: bf16
+  granularity: 100000000
+  rescoring: false
+
+qbit:
+  enabled: true
+  precision: [4, 8, 16]
+
+exact:
+  enabled: true
+
+execution:
+  warmup_queries_per_config: 1
+  repeats: 2
+  randomize_order: true
+  stop_on_error: false
+  max_cases: null
+  cache_state: warm
+  collect_explain: true
+  collect_resources: true
+  clear_vector_index_cache_before_config: true
+
+analysis:
+  focus_k: 100
+  focus_sigma: 0.1
+  focus_gls_group: medium
+  bootstrap_samples: 1000
+  confidence_level: 0.95
+  make_pdf: true

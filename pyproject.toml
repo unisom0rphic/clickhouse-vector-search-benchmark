@@ -1,0 +1,40 @@
+[build-system]
+requires = ["setuptools>=69", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "clickhouse-vector-search-benchmark"
+version = "0.1.0"
+description = "Reproducible HNSW and QBit benchmark harness for ClickHouse and MoReVec"
+readme = "README.md"
+requires-python = ">=3.12,<3.13"
+license = {text = "MIT"}
+authors = [{name = "Research artifact contributors"}]
+dependencies = [
+  "clickhouse-connect>=1.10.1,<2.0",
+  "numpy>=1.26,<3.0",
+  "pandas>=2.1,<3.0",
+  "h5py>=3.10,<4.0",
+  "PyYAML>=6.0,<7.0",
+  "matplotlib>=3.8,<4.0",
+  "scipy>=1.12,<2.0",
+  "gdown>=5.2,<6.0",
+  "python-dotenv>=1.0,<2.0",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=8.0,<10.0", "ruff>=0.6,<1.0"]
+
+[project.scripts]
+chvecbench = "bench.cli:main"
+
+[tool.setuptools.packages.find]
+include = ["bench*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"

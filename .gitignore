@@ -1,0 +1,21 @@
+.env
+.venv/
+__pycache__/
+.pytest_cache/
+.ruff_cache/
+*.py[cod]
+
+# Dataset files are obtained separately; do not commit MoReVec.
+data/**
+!data/README.md
+!data/.gitkeep
+
+# Results can be large. Keep generated outputs out of source history by default.
+results/raw/**
+!results/raw/.gitkeep
+results/analysis/**
+!results/analysis/.gitkeep
+artifacts/explain/**
+!artifacts/explain/.gitkeep
+
+*.log
