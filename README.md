@@ -31,7 +31,7 @@ clickhouse-vector-search-benchmark/
 
 ## Setup
 
-Python 3.10+ is required. Docker Engine / Docker Desktop with Compose v2 is required for the ClickHouse service.
+The benchmark environment and CI use Python 3.12.14. Docker Engine / Docker Desktop with Compose v2 is required for the ClickHouse service.
 
 ```bash
 python -m venv .venv
@@ -71,7 +71,7 @@ docker compose up -d
 python benchmark.py preflight
 ```
 
-Prepare the query/filter workload, GLS and exact ground truth:
+Prepare the query/filter workload, GLS and exact ground truth. The progress bar counts completed queries, including all filters for each query:
 
 ```bash
 python benchmark.py prepare

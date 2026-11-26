@@ -9,6 +9,7 @@ from typing import Any
 
 import numpy as np
 import pandas as pd
+from tqdm import tqdm
 
 from .config import resolve_path
 from .dataset import MovieDataset, load_movie_dataset
@@ -115,6 +116,7 @@ def prepare_workload(config: dict[str, Any], output_dir: str | Path | None = Non
     Source MoReVec HDF5 files are read-only. The only transformed copy used by the
     ClickHouse benchmark is rounded to BFloat16 to match the chosen stored-vector type.
     """
+    LOG.info("Loading MoReVec dataset")
     dataset = load_movie_dataset(config)
     project_root = Path(config["_project_root"])
     out_root = Path(output_dir) if output_dir else project_root / "data" / "prepared"
@@ -124,6 +126,7 @@ def prepare_workload(config: dict[str, Any], output_dir: str | Path | None = Non
 
     # Use the same BFloat16-rounded values for ground truth, HNSW, QBit and exact baseline.
     # Round in place to avoid a second 1.7-GB matrix for Movies Large.
+    LOG.info("Preparing BFloat16 vectors, queries and filters")
     vectors = float32_to_bfloat16_inplace(dataset.vectors)
     dataset.vectors = vectors
     queries = float32_to_bfloat16_roundtrip(dataset.queries)
@@ -134,7 +137,6 @@ def prepare_workload(config: dict[str, Any], output_dir: str | Path | None = Non
     local_k = int(config["workload"].get("local_neighbors", 2048))
     sensitivity_ks = [int(x) for x in config["workload"].get("local_neighbors_sensitivity", [])]
     local_ks = sorted(set([local_k] + sensitivity_ks))
-    max_local_k = min(max(local_ks), len(vectors) - 1)
     requested_max_gt = int(config["workload"].get("max_ground_truth_k", max(config["workload"]["k_values"])))
 
     query_npz = out_root / "queries.npz"
@@ -155,12 +157,9 @@ def prepare_workload(config: dict[str, Any], output_dir: str | Path | None = Non
 
     rows: list[dict[str, Any]] = []
     query_meta: list[dict[str, Any]] = []
-    total_pairs = len(dataset.queries) * len(filters)
-    pair_number = 0
-
-    for query_index, (query, query_id, excluded_id) in enumerate(
-        zip(queries, dataset.query_ids, dataset.excluded_ids, strict=True)
-    ):
+    query_inputs = zip(queries, dataset.query_ids, dataset.excluded_ids, strict=True)
+    progress = tqdm(query_inputs, total=len(queries), desc="Preparing ground truth and GLS", unit="query")
+    for query_index, (query, query_id, excluded_id) in enumerate(progress):
         excluded_index = id_to_row.get(str(excluded_id)) if excluded_id else None
         distances = squared_l2_from_dot(vectors, query, matrix_norm_sq)
         if excluded_index is not None:
@@ -241,10 +240,8 @@ def prepare_workload(config: dict[str, Any], output_dir: str | Path | None = Non
                 "Ground_Truth_File": gt_name,
                 "GLS_Sensitivity": json.dumps(rho_sensitivity, sort_keys=True),
             })
-            pair_number += 1
-            if pair_number % 100 == 0 or pair_number == total_pairs:
-                LOG.info("Prepared ground truth for %d/%d query/filter pairs", pair_number, total_pairs)
 
+    LOG.info("Writing workload summaries and computing dataset signatures")
     workload_df = pd.DataFrame(rows)
     if workload_df.empty:
         raise RuntimeError("No query/filter pairs produced. Check dataset mapping and filter attribute.")
