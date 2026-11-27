@@ -291,8 +291,8 @@ def _run_one_query(
         sql,
         parameters=params,
         settings=settings,
-        query_id=query_id,
     )
+    query_id = result.query_id
     ids = [str(row[0]) for row in result.result_rows]
     log_row = wait_for_query_log(
         client,

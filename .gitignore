@@ -18,4 +18,7 @@ results/analysis/**
 artifacts/explain/**
 !artifacts/explain/.gitkeep
 
+# egg files
+*.egg-info
+
 *.log
