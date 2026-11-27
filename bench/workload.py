@@ -79,7 +79,8 @@ def _build_filters(dataset: MovieDataset, config: dict[str, Any]) -> list[Filter
         filter_id = f"{attribute}_ge_{threshold:.6f}_t{target:.4f}".replace(".", "p")
         filters.append(FilterSpec(
             filter_id=filter_id,
-            filter_sql=f"{attribute} >= {threshold:.9g}",
+            # Preserve the Float32 rating exactly when SQL parses the literal as Float64.
+            filter_sql=f"{attribute} >= {threshold!r}",
             filter_type="numeric_range",
             sigma_target=target,
             sigma_actual=actual,

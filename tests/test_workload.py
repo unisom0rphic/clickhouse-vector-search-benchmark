@@ -46,3 +46,21 @@ def test_prepare_workload_leaves_hdf5_untouched_and_writes_gls(tmp_path):
     assert (tmp_path / "data/prepared/query_workload.csv").exists()
     assert (tmp_path / "data/prepared/gls_coverage.csv").exists()
     assert len(list((tmp_path / "data/prepared/ground_truth").glob("*.npy"))) > 0
+
+
+def test_rating_filter_includes_every_movie_at_float32_boundary():
+    from types import SimpleNamespace
+    from bench.workload import _build_filters
+
+    boundary = np.float32(9.2)
+    ratings = np.array([
+        np.nextafter(boundary, np.float32(0)), boundary, boundary,
+        np.nextafter(boundary, np.float32(10)),
+    ])
+    config = {"source": {}, "workload": {"include_unfiltered": False, "sigma_targets": [0.5]}}
+    spec, = _build_filters(SimpleNamespace(attributes={"avgrating": ratings}), config)
+    # ClickHouse parses a fractional SQL literal as Float64.
+    sql_threshold = float(spec.filter_sql.removeprefix("avgrating >= "))
+    mask = ratings.astype(np.float64) >= sql_threshold
+    assert mask.tolist() == [False, True, True, True]
+    assert mask.mean() == spec.sigma_actual
